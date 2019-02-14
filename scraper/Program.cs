@@ -12,36 +12,72 @@ namespace scraper
     {
         static void Main(string[] args)
         {
-            var url = "https://www.zillow.com/homes/1528-Hutchison-Valley-Dr,-Woodland,-CA-95776_rb/";
+            //assume house info is given like this...
+            int houseNumber = 1528;
+            string streetname = "Hutchison Valley Dr";  //last term has to be abbrebiated(need to see if map api does that)
+            string city = "Woodland";
+            string state = "CA";
+            int zip = 95776;
+            string lastTag = "_rb/";
+
+            string zillowURL = GenerateURL(houseNumber, streetname, city, state, zip, lastTag); //generate the URL string
             WebClient client = new WebClient();
             client = SetHeaders(client);
-            string html = client.DownloadString(url);
-            //Console.WriteLine(html);
+            string html = client.DownloadString(zillowURL);
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(html);
-            var node = htmlDoc.DocumentNode.SelectSingleNode("//head/title");
 
-            //indexing actally starts with 1 for webscraping and node2 grabs element that has # of bed info
-            var node2 = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[2]"); 
-            //node 4 grabs 4th span element which contains bath info
-            var node4 = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[4]");
-            //node 6 grabs 6th span element which has the sqaure feet info
-            var node6 = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[6]");
-            
-            //save their tags
-            string roomsInfo = node2.OuterHtml;
-            string bathInfo = node4.OuterHtml;
-            string areatext = node6.OuterHtml;
+            string AddressText = htmlDoc.DocumentNode.SelectSingleNode("//head/title").OuterHtml; //contains address embeded in title tag
+            string roomsText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[2]").OuterHtml; //room info is embeded in this string
+            string bathText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[4]").OuterHtml;
+            string areaText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[6]").OuterHtml;
+            string zestimateText = htmlDoc.DocumentNode.SelectSingleNode("//div[contains(@class, 'zestimate primary-quote')]/div").OuterHtml;
 
-            int numberOfBaths = getNumberOfBaths(bathInfo);
-            int numberOfBeds = getNumberOfBeds(roomsInfo);
-            int areaInSqFt = getAreaInfo(areatext);
+            //return numerical value of those fields
+            string houseAddress = getHouseAddress(AddressText);
+            int numberOfBaths = getNumberOfBaths(bathText); 
+            int numberOfBeds = getNumberOfBeds(roomsText);
+            int areaInSqFt = getAreaInfo(areaText);
+            int Zestimate = getZestimate(zestimateText);
 
+            Console.WriteLine("For house: " + houseAddress);
             Console.WriteLine(areaInSqFt + " is area");
-            Console.WriteLine(numberOfBeds + "is number of beds");
-            Console.WriteLine(numberOfBaths + "is number of baths");
+            Console.WriteLine(numberOfBeds + " is number of beds");
+            Console.WriteLine(numberOfBaths + " is number of baths");
+            Console.WriteLine(Zestimate + " is the estimated price of home.");
             Console.Read();
         }
+        static string GenerateURL(int houseNumber, string street,string city,string state, int zipcode, string lastTag)
+        {
+            string url = "https://www.zillow.com/homes/";
+            url = url + houseNumber.ToString()+"-"; //add house number and dash
+            //replace spaces(' ') in prefix with '-'
+            street = street.Replace(" ", "-");
+            url = url + street + ",-" + city + ",-" + state + "-" + zipcode + lastTag;
+            return url;
+        }
+
+        //houseText format: <title>1528 Hutchison Valley Dr, Woodland, CA 95776 | Zillow</title>
+        //return address without the tags
+        static string getHouseAddress(string houseText) 
+        {
+            int endTagIndex = houseText.IndexOf('|'); //stop reading when we see |
+            int NumCharToRead = endTagIndex - 7;
+            string address = houseText.Substring(7,NumCharToRead); //starting @ index 7 read  NumCharToRead many characters
+            return address;
+        }
+        static int getZestimate(string zestimateText)
+        {
+            //find index of $ symbol, and find index of </div>
+            int dollarSign = zestimateText.IndexOf('$');
+            int endOfZestimate = zestimateText.LastIndexOf('<');
+            int charToRead = endOfZestimate - dollarSign-1;  //how many characters to read
+            zestimateText = zestimateText.Substring(dollarSign + 1,charToRead); //dollarsing+1 b/c we care about number after $ 
+            zestimateText = zestimateText.Replace(",", "");
+            int zestimation = Int32.Parse(zestimateText);
+            return zestimation;
+        }
+
         static int getAreaInfo(string areaText) //areaText format: <span>2,247 sqft</span>
         {
             int spaceIndex = areaText.IndexOf(' '); //index used to determine end of square feet information
