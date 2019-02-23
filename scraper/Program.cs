@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using System.Net;
+using System.Xml;
+
 
 namespace scraper
 {
@@ -27,11 +29,13 @@ namespace scraper
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(html);
 
+            
             string AddressText = htmlDoc.DocumentNode.SelectSingleNode("//head/title").OuterHtml; //contains address embeded in title tag
             string roomsText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[2]").OuterHtml; //room info is embeded in this string
             string bathText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[4]").OuterHtml;
             string areaText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[6]").OuterHtml;
             string zestimateText = htmlDoc.DocumentNode.SelectSingleNode("//div[contains(@class, 'zestimate primary-quote')]/div").OuterHtml;
+            //string solarFactorText = htmlDoc.DocumentNode.SelectSingleNode("(//div[@class ='home-details-facts-category-group-container'])[4]").OuterHtml;
 
             //return numerical value of those fields
             string houseAddress = getHouseAddress(AddressText);
@@ -45,6 +49,8 @@ namespace scraper
             Console.WriteLine(numberOfBeds + " is number of beds");
             Console.WriteLine(numberOfBaths + " is number of baths");
             Console.WriteLine(Zestimate + " is the estimated price of home.");
+           
+
             Console.Read();
         }
         static string GenerateURL(int houseNumber, string street,string city,string state, int zipcode, string lastTag)
@@ -109,10 +115,10 @@ namespace scraper
         static WebClient SetHeaders(WebClient client)
         {
             client.Headers[HttpRequestHeader.Accept] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8";
-            client.Headers[HttpRequestHeader.AcceptEncoding] = "";
+            client.Headers[HttpRequestHeader.AcceptEncoding] = "identity";
             client.Headers[HttpRequestHeader.AcceptLanguage] = "en-US,en;q=0.9";
             client.Headers[HttpRequestHeader.Upgrade] = "1";
-            client.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.81 Safari/537.36";
+            client.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36";
             return client;
         }
     }
