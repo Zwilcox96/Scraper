@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
+using System;
 using System.Net;
-using System.Xml;
 
 
 namespace scraper
@@ -22,10 +17,13 @@ namespace scraper
             int zip = 95776;
             string lastTag = "_rb/";
 
+            House house = new House(houseNumber, streetname, city, state, zip);
+            house.fetchInfo();
+
             string zillowURL = GenerateURL(houseNumber, streetname, city, state, zip, lastTag); //generate the URL string
             WebClient client = new WebClient();
             client = SetHeaders(client);
-            string html = client.DownloadString("https://www.zillow.com/homes/2005-Birmingham,-Sacramento,-CA-95691_rb/");
+            string html = client.DownloadString(zillowURL);
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(html);
 
@@ -50,7 +48,12 @@ namespace scraper
             Console.WriteLine(numberOfBeds + " is number of beds");
             Console.WriteLine(numberOfBaths + " is number of baths");
             Console.WriteLine(Zestimate + " is the estimated price of home.");
-           
+
+            Console.WriteLine("For house: " + house.houseAddress);
+            Console.WriteLine(house.areaInSqFt + " is area");
+            Console.WriteLine(house.numberOfBeds + " is number of beds");
+            Console.WriteLine(house.numberOfBaths + " is number of baths");
+            Console.WriteLine(house.zestimate + " is the estimated price of home.");
 
             Console.Read();
         }
