@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
+using System;
 using System.Net;
-using System.Xml;
 
 
 namespace scraper
@@ -22,6 +17,9 @@ namespace scraper
             int zip = 95776;
             string lastTag = "_rb/";
 
+            House house = new House(houseNumber, streetname, city, state, zip);
+            house.fetchInfo();
+
             string zillowURL = GenerateURL(houseNumber, streetname, city, state, zip, lastTag); //generate the URL string
             WebClient client = new WebClient();
             client = SetHeaders(client);
@@ -35,8 +33,9 @@ namespace scraper
             string bathText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[4]").OuterHtml;
             string areaText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[6]").OuterHtml;
             string zestimateText = htmlDoc.DocumentNode.SelectSingleNode("//div[contains(@class, 'zestimate primary-quote')]/div").OuterHtml;
-            //string solarFactorText = htmlDoc.DocumentNode.SelectSingleNode("(//div[@class ='home-details-facts-category-group-container'])[4]").OuterHtml;
+            string solarFactorText = htmlDoc.DocumentNode.SelectSingleNode("(//div[@class ='home-details-facts-category-group-container'])[4]").OuterHtml;
 
+            Console.WriteLine(solarFactorText);
             //return numerical value of those fields
             string houseAddress = getHouseAddress(AddressText);
             int numberOfBaths = getNumberOfBaths(bathText); 
@@ -49,7 +48,12 @@ namespace scraper
             Console.WriteLine(numberOfBeds + " is number of beds");
             Console.WriteLine(numberOfBaths + " is number of baths");
             Console.WriteLine(Zestimate + " is the estimated price of home.");
-           
+
+            Console.WriteLine("For house: " + house.houseAddress);
+            Console.WriteLine(house.areaInSqFt + " is area");
+            Console.WriteLine(house.numberOfBeds + " is number of beds");
+            Console.WriteLine(house.numberOfBaths + " is number of baths");
+            Console.WriteLine(house.zestimate + " is the estimated price of home.");
 
             Console.Read();
         }
