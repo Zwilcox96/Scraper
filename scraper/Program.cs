@@ -146,29 +146,123 @@ namespace scraper
         {
             int currentIndex = 0; //where we are within the arr of data
             //zsg-photo-card-price">$
-            string relevantElement = "zsg-photo-card-price\">$"; //this substring(which is a class name) is used before providing relevatn housing info., stores the begining index
-            int relevantElementLength = relevantElement.Length; //indexOf returns the index where releevantElement is stored, the value we want comes after that strings
-            int relevantHouseInfoIndex = 0; //index which tracks where the relevant house index actally begins
-            string spanElement = "</span>";
+             string usefulClass = "\"hdpUrl\":\""; //this field is really close to useful info so we will use this as a reference point 
+            int usefulClassLength = usefulClass.Length;
+            int usefulClassIndex = 0; //index which holds where the 'usefulClass' is in the string
 
+            //the first house info that comes after hdpURl is the one we just grabbed info on so we can skip it.
+            usefulClassIndex = htmlDOM.IndexOf(usefulClass, currentIndex); //find where usefulClass is in DOM
+            currentIndex = usefulClassIndex + 1;
             do
             {
-                relevantHouseInfoIndex = htmlDOM.IndexOf(relevantElement, currentIndex);
-                if(relevantHouseInfoIndex != -1)
+                usefulClassIndex = htmlDOM.IndexOf(usefulClass, currentIndex); //find where usefulClass is in DOM
+                if(usefulClassIndex != -1)
                 {
-                    //find string which is zestimate that comes after relevant index
-                    //grab zestimate
-                    //grab bed
-                    int spanElementIndex = htmlDOM.IndexOf(spanElement, relevantHouseInfoIndex);
-                    int startIndex = relevantHouseInfoIndex + relevantElementLength;
-                    int HowManyNumbers = spanElementIndex - startIndex;
-                    string zestimate = htmlDOM.Substring(startIndex, HowManyNumbers);
-                    Console.WriteLine("zestimate is:!- " + zestimate);
-                    currentIndex = relevantHouseInfoIndex+1;
+                    //address
+                    double NumBeds = GetBeds(htmlDOM, usefulClassIndex);
+                    double NumBaths = GetBaths(htmlDOM, usefulClassIndex);
+                    int HouseArea = GetArea(htmlDOM, usefulClassIndex);
+                    string zestimate = GetZestimate(htmlDOM, usefulClassIndex, usefulClassLength);
+                    string Address = GetAddress(htmlDOM, usefulClassIndex);
+                    Console.WriteLine(Address + "  Beds:" + NumBeds + " Baths: " + NumBaths + " HouseArea: " + HouseArea + "Zestimate: " + zestimate);
+                    currentIndex = usefulClassIndex + 1;
                 }
-            } while (relevantHouseInfoIndex != -1);
+            } while (usefulClassIndex != -1);
             
             Console.ReadLine();
+        }
+
+        static string GetAddress(string htmlDOM, int houseInfoIndex)
+        {
+            string AddressAttribute = "\"streetAddress\":\"";
+            int AddressIndex = htmlDOM.IndexOf(AddressAttribute, houseInfoIndex); //find "Address" after "hdpUrl"
+            int startIndex = AddressIndex + AddressAttribute.Length;
+
+            int endQuoteIndex = htmlDOM.IndexOf("\"},", startIndex); //"}, seperates Address field from others
+            int readUntilComma = endQuoteIndex - startIndex;
+
+            string AddressString = htmlDOM.Substring(startIndex, readUntilComma);
+            return AddressString;
+        }
+
+        static int GetArea (string htmlDOM, int houseInfoIndex)
+        {
+            string areaAttribute = "\"livingArea\":";
+            int areaIndex = htmlDOM.IndexOf(areaAttribute, houseInfoIndex); //find "area" after "hdpUrl"
+            int startIndex = areaIndex + areaAttribute.Length;
+
+            int commaIndex = htmlDOM.IndexOf(",", startIndex); //comma seperates area field from others
+            int readUntilComma = commaIndex - startIndex;
+
+            string AreaString = htmlDOM.Substring(startIndex, readUntilComma);
+            int numareas;
+            if (Int32.TryParse(AreaString, out numareas))
+            {
+                numareas = Int32.Parse(AreaString);
+            }
+            else
+            {
+                numareas = 0;
+            }
+            return numareas;
+        }
+
+        static double GetBaths(string htmlDOM, int houseInfoIndex) 
+        {
+            string bathAttribute = "\"bathrooms\":";
+            int bathIndex = htmlDOM.IndexOf(bathAttribute, houseInfoIndex); //find "bath" after "hdpUrl"
+            int startIndex = bathIndex + bathAttribute.Length;
+
+            int commaIndex = htmlDOM.IndexOf(",", startIndex); //comma seperates bath field from others
+            int readUntilComma = commaIndex - startIndex;
+
+            string numBathString = htmlDOM.Substring(startIndex, readUntilComma);
+            double numbaths;
+            if (Double.TryParse(numBathString, out numbaths))
+            {
+                numbaths = Double.Parse(numBathString);
+            }
+            else
+            {
+                numbaths = 0;
+            }
+            return numbaths;
+        }
+
+        static double GetBeds(string htmlDOM, int houseInfoIndex)
+        {
+            string bedAttribute = "\"bedrooms\":";
+            int bedIndex = htmlDOM.IndexOf(bedAttribute, houseInfoIndex); //find "bed" after "hdpUrl"
+            int startIndex = bedIndex + bedAttribute.Length;
+
+            int commaIndex = htmlDOM.IndexOf(",", startIndex); //comma seperates bed field from others
+            int readUntilComma = commaIndex - startIndex;
+
+            string numBedString = htmlDOM.Substring(startIndex, readUntilComma);
+            double numBeds;
+            if(Double.TryParse(numBedString,out numBeds))
+            {
+                numBeds = Double.Parse(numBedString);
+            }
+            else
+            {
+                numBeds = 0;
+            }
+            return numBeds;
+        }
+ 
+        static string GetZestimate(string htmlDOM,int usefulClassIndex, int usefulClassLength)
+        {
+            string priceAttribute = "\"price\":";
+            int priceIndex = htmlDOM.IndexOf(priceAttribute, usefulClassIndex); //find "price" after "hdpUrl"
+            int startIndex = priceIndex + priceAttribute.Length;
+
+            int commaIndex = htmlDOM.IndexOf(",", startIndex); //comma seperates price field from others
+            int readUntilComma = commaIndex - startIndex;
+
+            string zestimateString = htmlDOM.Substring(startIndex, readUntilComma);
+            Console.WriteLine(zestimateString);
+            return zestimateString;
         }
 
     }
