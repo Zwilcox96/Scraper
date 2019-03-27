@@ -16,6 +16,7 @@ namespace scraper
         string state;
         int zip;
         string lastTag = "_rb/";
+        public HtmlDocument htmlDoc;
         //string zillowURL;
 
         public string houseAddress { get; private set; }
@@ -51,7 +52,7 @@ namespace scraper
             WebClient client = new WebClient();
             client = SetHeaders(client);
             string html = client.DownloadString(getZillowURL());
-            HtmlDocument htmlDoc = new HtmlDocument();
+            htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(html);
             parseHTML(htmlDoc);
         }
