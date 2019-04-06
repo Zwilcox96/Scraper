@@ -1,7 +1,7 @@
-﻿using HtmlAgilityPack;
+﻿
 using System;
 using System.Net;
-using System.IO;
+
 
 
 namespace scraper
@@ -11,17 +11,18 @@ namespace scraper
         static void Main(string[] args)
         {
             //assume house info is given like this...
-            int houseNumber = 1382;
-            string streetname = "Leo Way";  //last term has to be abbrebiated(need to see if map api does that)
+            int houseNumber = 1555;
+            string streetname = "Squaw Valley Drive"; 
             string city = "Woodland";
             string state = "CA";
             int zip = 95776;
             string lastTag = "_rb/";
-
+            
             House house = new House(houseNumber, streetname, city, state, zip);
             house.fetchInfo();
             printHouseInfo(house);
            
+            //this code is moved to house classs
             /*
             string zillowURL = GenerateURL(houseNumber, streetname, city, state, zip, lastTag);
             string ApiKey = "fae228e0fcd20c4676bf1ea0cc2a1514";

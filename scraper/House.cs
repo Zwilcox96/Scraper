@@ -65,7 +65,6 @@ namespace scraper
             //which is 10k characters long, we are going to trim it
             int hInfoStartIndex = StrZillowInfo.IndexOf("middle-dot"); //houseInfoStartIndex 
             int hInfoEndIndex = StrZillowInfo.IndexOf("</h3>");//houseInfoEndIndex
-
             //StrZillowInfo contained almost 10k characters, this will contain less than 5% thus removing searching in un-necessary area of the document
             string hInfoReferenceStr = StrZillowInfo.Substring(hInfoStartIndex, hInfoEndIndex - hInfoStartIndex);
             houseAddress = getHouseAddress(StrZillowInfo);
@@ -90,8 +89,8 @@ namespace scraper
         {
             int zestimation; //var to store zestimate value
             //find index of $ symbol, and find index of </div>
-            int startIndex = zestimateText.IndexOf("Home Value: $") + 13;
-            int endOfZestimate = zestimateText.IndexOf(".", startIndex);
+            int startIndex = zestimateText.IndexOf("The Zestimate for this house is $") + 33;
+            int endOfZestimate = zestimateText.IndexOf(", which", startIndex);
             zestimateText = zestimateText.Substring(startIndex, endOfZestimate - startIndex); //dollarsing+1 b/c we care about number after $ 
             zestimateText = zestimateText.Replace(",", "");
             bool gotZestimation = Int32.TryParse(zestimateText, out zestimation);
