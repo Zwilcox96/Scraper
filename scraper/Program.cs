@@ -19,54 +19,26 @@ namespace scraper
             string lastTag = "_rb/";
 
             House house = new House(houseNumber, streetname, city, state, zip);
-            //house.fetchInfo();
-      
-            string zillowURL = GenerateURL(houseNumber, streetname, city, state, zip, lastTag); //generate the URL string
-                                                                                                //WebClient client = new WebClient();
-                                                                                                //client = SetHeaders(client);
-                                                                                                //string html = client.DownloadString(zillowURL);
-                                                                                                //var htmlDoc = new HtmlDocument();
-                                                                                                //htmlDoc.LoadHtml(html);
-
+            house.fetchInfo();
+            printHouseInfo(house);
+           
             /*
-            string AddressText = htmlDoc.DocumentNode.SelectSingleNode("//head/title").OuterHtml; //contains address embeded in title tag
-            string roomsText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[2]").OuterHtml; //room info is embeded in this string
-            string bathText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[4]").OuterHtml;
-            string areaText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[6]").OuterHtml;
-            string zestimateText = htmlDoc.DocumentNode.SelectSingleNode("//div[contains(@class, 'zestimate primary-quote')]/div").OuterHtml;
-            
-            string houseAddress = getHouseAddress(AddressText);
-            float numberOfBaths = getNumberOfBaths(bathText);
-            float numberOfBeds = getNumberOfBeds(roomsText);
-            int areaInSqFt = getAreaInfo(areaText);
-            int zestimate = getZestimate(zestimateText);
+            string zillowURL = GenerateURL(houseNumber, streetname, city, state, zip, lastTag);
+            string ApiKey = "fae228e0fcd20c4676bf1ea0cc2a1514";
 
-            Console.WriteLine("For house: " + house.houseAddress);
-            Console.WriteLine(house.areaInSqFt + " is area");
-            Console.WriteLine(house.numberOfBeds + " is number of beds");
-            Console.WriteLine(house.numberOfBaths + " is number of baths");
-            Console.WriteLine(house.zestimate + " is the estimated price of home.");
-            FindNeighbors(html); //if you want neighboring houses info
-            */
-            //we need to do get request to the scraperapi
-            string scraperLink = "http://api.scraperapi.com?api_key=fae228e0fcd20c4676bf1ea0cc2a1514&url=https://www.zillow.com/homes/1382-Leo-Way,-Woodland,-CA-95776_rb/";
-            
-
+            //we need to do get request to the scraperapi and thats the link
+            string scraperLink = "http://api.scraperapi.com?api_key=" + ApiKey + "&url="+ zillowURL;
             WebRequest wrGETURL = WebRequest.Create(scraperLink);
             Stream outputStream = wrGETURL.GetResponse().GetResponseStream();
             StreamReader zillowInfo = new StreamReader(outputStream);
             string StrZillowInfo = zillowInfo.ReadToEnd();
 
-            //beds,bath and area info. are really close to each other 
-            //so to prevent searching the whole HTMLDOM 3 times
-            //we gonna figure out where they are located in the dom and save it to variable and use it
-            int hInfoStartIndex = StrZillowInfo.IndexOf("middle-dot"); //houseInfoStartIndex
+            //beds,bath and area info. are really close to each other and to prevent 3 un-necessary searches to whole DOM we are going to trim it
+            int hInfoStartIndex = StrZillowInfo.IndexOf("middle-dot"); //houseInfoStartIndex which contains index where useful(bed,rooms,sqft info are closely located)
             int hInfoEndIndex = StrZillowInfo.IndexOf("</h3>");//houseInfoEndIndex
 
             //StrZillowInfo contained almost 10k characters, this will contain less than 5% thus removing searching in un-necessary area of the document
             string hInfoReferenceStr = StrZillowInfo.Substring(hInfoStartIndex, hInfoEndIndex- hInfoStartIndex);
-            Console.WriteLine("House info: " + hInfoReferenceStr);
-
             string AddressText = getHouseAddress(StrZillowInfo);
             Console.WriteLine("Address is: " + AddressText);
             float numberOfBeds = getNumberOfBeds(hInfoReferenceStr);
@@ -74,10 +46,21 @@ namespace scraper
             float numberOfBaths = getNumberOfBaths(hInfoReferenceStr);
             Console.WriteLine("Number of bath is " + numberOfBaths);
             int areaInSqFt = getAreaInfo(hInfoReferenceStr);
-            Console.WriteLine("New Area is " + areaInSqFt);
+            Console.WriteLine(" Area is " + areaInSqFt);
+            int zestimate = getZestimate(StrZillowInfo);
+            Console.WriteLine("ZESTIMATE: " + zestimate);
+            */
             Console.Read();
         }
-        
+        static void printHouseInfo(House home)
+        {
+            Console.WriteLine("Address: " + home.houseAddress);
+            Console.WriteLine("beds: " + home.numberOfBeds);
+            Console.WriteLine("baths: " + home.numberOfBaths);
+            Console.WriteLine("Zestimate: " + home.zestimate);
+            Console.WriteLine("Area: " + home.areaInSqFt);
+
+        }
         static string GenerateURL(int houseNumber, string street,string city,string state, int zipcode, string lastTag)
         {
             string url = "https://www.zillow.com/homes/";
@@ -104,10 +87,9 @@ namespace scraper
         {
             int zestimation; //var to store zestimate value
             //find index of $ symbol, and find index of </div>
-            int dollarSign = zestimateText.IndexOf('$');
-            int endOfZestimate = zestimateText.LastIndexOf('<');
-            int charToRead = endOfZestimate - dollarSign - 1;  //how many characters to read
-            zestimateText = zestimateText.Substring(dollarSign + 1, charToRead); //dollarsing+1 b/c we care about number after $ 
+            int startIndex = zestimateText.IndexOf("Home Value: $") +13;
+            int endOfZestimate = zestimateText.IndexOf(".", startIndex);
+            zestimateText = zestimateText.Substring(startIndex, endOfZestimate- startIndex); //dollarsing+1 b/c we care about number after $ 
             zestimateText = zestimateText.Replace(",", "");
             bool gotZestimation = Int32.TryParse(zestimateText, out zestimation);
             return gotZestimation ? zestimation : -1;
