@@ -19,8 +19,8 @@ namespace scraper
         //string zillowURL;
 
         public string houseAddress { get; private set; }
-        public int numberOfBaths { get; private set; }
-        public int numberOfBeds { get; private set; }
+        public float numberOfBaths { get; private set; } //some houses have half baths
+        public float numberOfBeds { get; private set; } //making it float for the case that there is a house with half a room
         public int areaInSqFt { get; private set; }
         public int zestimate { get; private set;}
 
@@ -82,42 +82,47 @@ namespace scraper
 
         static int getZestimate(string zestimateText)
         {
+            int zestimation; //var to store zestimate value
             //find index of $ symbol, and find index of </div>
             int dollarSign = zestimateText.IndexOf('$');
             int endOfZestimate = zestimateText.LastIndexOf('<');
             int charToRead = endOfZestimate - dollarSign - 1;  //how many characters to read
             zestimateText = zestimateText.Substring(dollarSign + 1, charToRead); //dollarsing+1 b/c we care about number after $ 
             zestimateText = zestimateText.Replace(",", "");
-            int zestimation = Int32.Parse(zestimateText);
-            return zestimation;
+            bool gotZestimation = Int32.TryParse(zestimateText, out zestimation);
+            return gotZestimation ? zestimation : -1;
         }
     
         static int getAreaInfo(string areaText) //areaText format: <span>2,247 sqft</span>
         {
+            int area; //variable used to store area info.
             int spaceIndex = areaText.IndexOf(' '); //index used to determine end of square feet information
             int startIndex = 6;  //starting index is 6 b/c "<span>" takes indexes 0-5
             areaText = areaText.Replace(",", ""); // replace comma with nothing
             areaText = areaText.Substring(startIndex, spaceIndex - startIndex); //read the numerical number portion of string only
-            int area = Int32.Parse(areaText);  //convert numerial string to number
-            return area;
+            bool gotArea = Int32.TryParse(areaText,out area);  //convert numerial string to number
+            return gotArea? area : -1; //if got area is true return area value 
         }
 
-        static int getNumberOfBeds(string bedText) //bed text has form like: <span>4 beds</span>
+        static float getNumberOfBeds(string bedText) //bed text has form like: <span>4 beds</span>
         {
+            float numOfBeds;
             int bIndex = bedText.IndexOf(' '); //determine we are done reading numbers
             int startIndex = 6;
             bedText = bedText.Substring(startIndex, bIndex - startIndex);
-            int bedCount = Int32.Parse(bedText);
-            return bedCount;
+            bool gotNumOfBeds = float.TryParse(bedText, out numOfBeds);
+            return gotNumOfBeds ? numOfBeds : -1; //if gotNumOfBeds true then return numOfBeds else -1
         }
 
-        static int getNumberOfBaths(string bathText) //bed text has form like: <span>4 beds</span>
+        static float getNumberOfBaths(string bathText) //bed text has form like: <span>4 beds</span>
         {
+            float numberOfBaths;
             int bIndex = bathText.IndexOf('b'); //determine we are done reading numbers
             int startIndex = 6;  //starting index is 6 b/c <span> takes indexes 0-5
             bathText = bathText.Substring(startIndex, bIndex - 6);
-            int bathCount = Int32.Parse(bathText);
-            return bathCount;
+
+            bool getBath = float.TryParse(bathText, out numberOfBaths); //if sucess then getBath is true
+            return getBath ? numberOfBaths : -1;
         }
 
         static WebClient SetHeaders(WebClient client)
