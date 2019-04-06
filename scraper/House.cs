@@ -1,11 +1,9 @@
 ﻿using HtmlAgilityPack;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
+using System.IO;
+
 
 namespace scraper
 {
@@ -17,7 +15,6 @@ namespace scraper
         string state;
         int zip;
         string lastTag = "_rb/";
-        //string zillowURL;
 
         public string houseAddress { get; private set; }
         public float numberOfBaths { get; private set; } //some houses have half baths
@@ -50,15 +47,33 @@ namespace scraper
         public void fetchInfo()
         {
             string ApiKey = "fae228e0fcd20c4676bf1ea0cc2a1514";
-            //we need to do get request to the scraperapi and thats the link
             string scraperLink = "http://api.scraperapi.com?api_key=" + ApiKey + "&url=" + getZillowURL();
-            WebRequest wrGETURL = WebRequest.Create(scraperLink);
-            Stream outputStream = wrGETURL.GetResponse().GetResponseStream();
-            StreamReader zillowInfo = new StreamReader(outputStream);
-            string StrZillowInfo = zillowInfo.ReadToEnd();
-            parseHTML(StrZillowInfo);
-        }
+            
+            HttpWebRequest wrGETURL = (HttpWebRequest) WebRequest.Create(scraperLink);
+            HttpWebResponse wrInfo = (HttpWebResponse)wrGETURL.GetResponse(); 
 
+            int statusCode = (int) wrInfo.StatusCode;
+            if(statusCode == 200)
+             {
+              Stream outputStream = wrInfo.GetResponseStream();
+              StreamReader zillowInfo = new StreamReader(outputStream);
+              string StrZillowInfo = zillowInfo.ReadToEnd();
+              parseHTML(StrZillowInfo);
+            }
+            else PrintError(statusCode);
+        }
+        private void PrintError(int errorCode)
+        {
+          switch(statusCode)
+           {
+             case 500:
+               Console.WriteLine("cannot get data from api call. Request failed despite retring for 60 seconds");
+               break;
+             case 429:
+               Console.WriteLine("Exceeding api request calls in our plan");
+               break;
+          }
+        }
         private void parseHTML(String StrZillowInfo)
         {
             //beds,bath and area info. are close to each other and to prevent 3 un-necessary searches to whole DOM
