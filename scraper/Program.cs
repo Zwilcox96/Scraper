@@ -11,16 +11,28 @@ namespace scraper
         static void Main(string[] args)
         {
             //assume house info is given like this...
-            int houseNumber = 1555;
-            string streetname = "Squaw Valley Drive"; 
+            int houseNumber = 10 ;
+            string streetname = "Collins Pl"; 
             string city = "Woodland";
             string state = "CA";
             int zip = 95776;
             string lastTag = "_rb/";
+
+
             
             House house = new House(houseNumber, streetname, city, state, zip);
+            House house2 = new House(1528, "hutchison valley dr", "woodland","ca",95776);
+            House house3 = new House(1527, "hutchison valley dr", "woodland","ca",95776);
+            House house4 = new House(1944, "Hackett  dr", "woodland","ca",95776);
+            House house5 = new House(1563 , "Carmel Valley Dr", "woodland","ca",95776);
+            House house6 = new House(967, "Bourn Dr", "woodland","ca",95776);
             house.fetchInfo();
-            printHouseInfo(house);
+            house2.fetchInfo();
+            house3.fetchInfo();
+            house4.fetchInfo();
+            house5.fetchInfo();
+            house6.fetchInfo();
+            
            
             //this code is moved to house classs
             /*
