@@ -1,7 +1,8 @@
 ﻿using HtmlAgilityPack;
 using System;
 using System.Net;
-
+using System.Linq;
+using System.Collections.Generic;
 
 namespace scraper
 {
@@ -19,9 +20,20 @@ namespace scraper
             string state = "CA";
             int zip = 95776;
             string lastTag = "_rb/";
+            List<House> houses = new List<House>();
 
             House house = new House(houseNumber, streetname, city, state, zip);
             house.fetchInfo();
+
+            House house2 = new House(5705, "Regan Hall Ln", "Carmichael", "CA", 95608);
+            house2.fetchInfo();
+            for(int i = 0; i < 10000; i++)
+            {
+                houses.Add(house);
+                houses.Add(house2);
+
+            }
+            
 
             string zillowURL = GenerateURL(houseNumber, streetname, city, state, zip, lastTag); //generate the URL string
             WebClient client = new WebClient();
@@ -62,13 +74,19 @@ namespace scraper
             int Zestimate = getZestimate(zestimateText);
 
 
-            FindString(html);
-            Console.WriteLine("For house: " + house.houseAddress);
-            Console.WriteLine(house.areaInSqFt + " is area");
-            Console.WriteLine(house.numberOfBeds + " is number of beds");
-            Console.WriteLine(house.numberOfBaths + " is number of baths");
-            Console.WriteLine(house.zestimate + " is the estimated price of home.");
-
+            //FindString(html);
+            //foreach (House curHouse in houses)
+            //{
+            //    Console.WriteLine("For house: " + curHouse.houseAddress);
+            //    Console.WriteLine(curHouse.areaInSqFt + " is area");
+            //    Console.WriteLine(curHouse.numberOfBeds + " is number of beds");
+            //    Console.WriteLine(curHouse.numberOfBaths + " is number of baths");
+            //    Console.WriteLine(curHouse.zestimate + " is the estimated price of home.");
+            //}
+            Console.WriteLine(Analytics.getAverageSquareFootage(houses) + " is average area");
+            Console.WriteLine(Analytics.getAverageBedrooms(houses) + " is number of beds");
+            Console.WriteLine(Analytics.getAverageBathrooms(houses) + " is number of baths");
+            Console.WriteLine(Analytics.getAverageZestimate(houses) + " is the estimated price of home.");
             Console.Read();
         }
         
