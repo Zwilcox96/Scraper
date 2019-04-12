@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Diagnostics;
 using System.Net;
 
 
@@ -18,21 +19,38 @@ namespace scraper
             int zip = 95776;
             string lastTag = "_rb/";
 
-            
+            Stopwatch timer = new Stopwatch();
+            timer.Start();
             House house = new House(houseNumber, streetname, city, state, zip);
             House house2 = new House(543, "Feather River Way", "vacaville","ca", 95688);
             House house3 = new House(1527, "hutchison valley dr", "woodland","ca",95776);
             House house4 = new House(1944, "Hackett  dr", "woodland","ca",95776);
             House house5 = new House(1563 , "Carmel Valley Dr", "woodland","ca",95776);
             House house6 = new House(967, "Bourn Dr", "woodland","ca",95776);
-            house.fetchInfo();
-            house2.fetchInfo();
-            house3.fetchInfo();
-            house4.fetchInfo();
-            house5.fetchInfo();
-            house6.fetchInfo();
-            
-           
+            var h1 = house.fetchInfo();
+            var h2 = house2.fetchInfo();
+            var h3 = house3.fetchInfo();
+            var h4 = house4.fetchInfo();
+            var h5 = house5.fetchInfo();
+            var h6 = house6.fetchInfo();
+
+
+            h1.Wait();
+            Console.WriteLine("first house done!");
+            h2.Wait();
+            Console.WriteLine("Second house done!");
+            h3.Wait();
+            Console.WriteLine("3 house done!");
+            h4.Wait();
+            Console.WriteLine("4 house done!");
+            h5.Wait();
+            Console.WriteLine("5 house done!");
+            h6.Wait();
+            Console.WriteLine("6 house done!");
+
+            timer.Stop();
+            TimeSpan ts = timer.Elapsed;
+            Console.WriteLine("min: " + ts.Minutes + "sec: " + ts.Seconds);
             //this code is moved to house class
             /*
             string zillowURL = GenerateURL(houseNumber, streetname, city, state, zip, lastTag);

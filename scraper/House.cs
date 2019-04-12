@@ -4,7 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.IO;
-
+using System.Threading.Tasks;
 
 namespace scraper
 {
@@ -45,21 +45,33 @@ namespace scraper
             return url;
         }
 
-        public async void fetchInfo()
+        public async Task fetchInfo()
         {
-            string ApiKey = "fae228e0fcd20c4676bf1ea0cc2a1514";
-            string scraperLink = "http://api.scraperapi.com?api_key=" + ApiKey + "&url=" + getZillowURL();
+            string ApiKey = "dee44cef6befc7cb5de3fb93f1d5e14e";
+            string scraperLink = "http://api.scraperapi.com?api_key=" + ApiKey + "&url=" + getZillowURL()+"&premium=true";
             
             HttpClient scraperAPI = new HttpClient();
             HttpResponseMessage  zillowInfo = await scraperAPI.GetAsync(scraperLink);
 
             int statusCode = (int) zillowInfo.StatusCode;
-            if(statusCode == 200)
-             {
-              string StrZillowInfo = await zillowInfo.Content.ReadAsStringAsync();
-              parseHTML(StrZillowInfo);
+            if (statusCode == 200)
+            {
+                string StrZillowInfo = await zillowInfo.Content.ReadAsStringAsync();
+                parseHTML(StrZillowInfo);
             }
-            else PrintError(statusCode);
+            else if(statusCode == 500)
+            {
+                Console.WriteLine("api failed trying again!");
+                zillowInfo = await scraperAPI.GetAsync(scraperLink);
+                statusCode = (int)zillowInfo.StatusCode;
+                if (statusCode == 200)
+                {
+                     Console.WriteLine("api worked!");
+                    string StrZillowInfo = await zillowInfo.Content.ReadAsStringAsync();
+                    parseHTML(StrZillowInfo);
+                }else Console.WriteLine("api failed yet again!");
+            }
+
         }
         private void PrintError(int errorCode)
         {
@@ -116,117 +128,191 @@ namespace scraper
         //return address without the tags
         static string getHouseAddress(string HTMLCode)
         {
-            int AddressTagLocation = HTMLCode.IndexOf("<title>");
-            int endTagIndex = HTMLCode.IndexOf('|', AddressTagLocation); //stop reading when we see | after addresstag
-            int NumCharToRead = endTagIndex - AddressTagLocation - 7; //7 b/c <title> is 7 char. long
-            string address = HTMLCode.Substring(AddressTagLocation + 7, NumCharToRead);
-            
-            //some homes contain that in title so if they do skip over it
-            if(address.Contains("Real Estate &amp")){
-                AddressTagLocation = HTMLCode.IndexOf("content=\"",AddressTagLocation) +9;
-                endTagIndex = HTMLCode.IndexOf("is ",AddressTagLocation);
-                address = HTMLCode.Substring(AddressTagLocation, endTagIndex-AddressTagLocation);
+            try
+            {
+                int AddressTagLocation = HTMLCode.IndexOf("<title>");
+                int endTagIndex = HTMLCode.IndexOf('|', AddressTagLocation); //stop reading when we see | after addresstag
+                int NumCharToRead = endTagIndex - AddressTagLocation - 7; //7 b/c <title> is 7 char. long
+                string address = HTMLCode.Substring(AddressTagLocation + 7, NumCharToRead);
+
+                //some homes contain that in title so if they do skip over it
+                if (address.Contains("Real Estate &amp"))
+                {
+                    AddressTagLocation = HTMLCode.IndexOf("content=\"", AddressTagLocation) + 9;
+                    endTagIndex = HTMLCode.IndexOf("is ", AddressTagLocation);
+                    address = HTMLCode.Substring(AddressTagLocation, endTagIndex - AddressTagLocation);
+                }
+                return address;
+            }catch(Exception e)
+            {
+                Console.WriteLine("Error occured in grabbing houseAddress");
+                return "error 101";
             }
-            return address;
+            
         }
 
         static int getZestimate(string zestimateText)
         {
-            int zestimation; //var to store zestimate value
-            string zestimateTag = "zestimate primary-quote\"";
-            int zestimateTagIndex = zestimateText.IndexOf(zestimateTag); //contains where useful info. is located
+            try
+            {
+                int zestimation; //var to store zestimate value
+                string zestimateTag = "zestimate primary-quote\"";
+                int zestimateTagIndex = zestimateText.IndexOf(zestimateTag); //contains where useful info. is located
+
+                //find index of $ symbol, and find index of </div>
+                int startIndex = zestimateText.IndexOf("$", zestimateTagIndex); //find $ after primaryquote thing
+                int endOfZestimate = zestimateText.IndexOf("</div>", startIndex);
+                zestimateText = zestimateText.Substring(startIndex + 1, endOfZestimate - startIndex - 1); //dollarsing+1 b/c we care about number after $ 
+                zestimateText = zestimateText.Replace(",", "");
+                bool gotZestimation = Int32.TryParse(zestimateText, out zestimation);
+                if (gotZestimation == false) Console.Write(zestimateText);
+                return gotZestimation ? zestimation : -1;
+            }catch(Exception e)
+            {
+                Console.WriteLine("could not get zestimate!");
+                return -101;
+            }
             
-            //find index of $ symbol, and find index of </div>
-            int startIndex = zestimateText.IndexOf("$",zestimateTagIndex); //find $ after primaryquote thing
-            int endOfZestimate = zestimateText.IndexOf("</div>", startIndex);
-            zestimateText = zestimateText.Substring(startIndex+1, endOfZestimate - startIndex-1); //dollarsing+1 b/c we care about number after $ 
-            zestimateText = zestimateText.Replace(",", "");
-            bool gotZestimation = Int32.TryParse(zestimateText, out zestimation);
-            if(gotZestimation == false) Console.Write(zestimateText);
-            return gotZestimation ? zestimation : -1;
         }
         static int getZestimateUpdated(string zestimateText)
         {
-            int zestimateReference = zestimateText.IndexOf("ds-price");
-             zestimateReference = zestimateText.IndexOf("Zestimate",zestimateReference); //find index of dollar sign after ds price class
-             zestimateReference = zestimateText.IndexOf("$",zestimateReference);
-            int endZestimateIndex = zestimateText.IndexOf("<",zestimateReference); //find < after the dollarsign
-            string zestimateStr = zestimateText.Substring(zestimateReference+1,endZestimateIndex-zestimateReference-1);
-            zestimateStr = zestimateStr.Replace(",","");
-            int zestimate;
-            bool convertedZestimate = Int32.TryParse(zestimateStr, out zestimate);
-            return convertedZestimate? zestimate:-2;
+            try
+            {
+                int zestimateReference = zestimateText.IndexOf("ds-price");
+                zestimateReference = zestimateText.IndexOf("Zestimate", zestimateReference); //find index of dollar sign after ds price class
+                zestimateReference = zestimateText.IndexOf("$", zestimateReference);
+                int endZestimateIndex = zestimateText.IndexOf("<", zestimateReference); //find < after the dollarsign
+                string zestimateStr = zestimateText.Substring(zestimateReference + 1, endZestimateIndex - zestimateReference - 1);
+                zestimateStr = zestimateStr.Replace(",", "");
+                int zestimate;
+                bool convertedZestimate = Int32.TryParse(zestimateStr, out zestimate);
+                return convertedZestimate ? zestimate : -2;
+            }catch(Exception e)
+            {
+                Console.WriteLine("Couldnot get getZestimateUpdated");
+                return -101;
+            }
+            
         }
         static int getAreaInfo(string tHTMLDOM) //areaText format: <span>2,247 sqft</span>
         {
-            int area;
-            tHTMLDOM = tHTMLDOM.Replace(",", ""); // replace comma with nothing
-            int endIndex = tHTMLDOM.IndexOf("sqft</span>");
-            int startIndex = endIndex;
-            while (tHTMLDOM[startIndex] != '>')
+            try
             {
-                startIndex--;
+                int area;
+                tHTMLDOM = tHTMLDOM.Replace(",", ""); // replace comma with nothing
+                int endIndex = tHTMLDOM.IndexOf("sqft</span>");
+                int startIndex = endIndex;
+                while (tHTMLDOM[startIndex] != '>')
+                {
+                    startIndex--;
+                }
+                startIndex++; //startIndex points to > when we want it to point to the next character which is part of house #
+                tHTMLDOM = tHTMLDOM.Substring(startIndex, endIndex - startIndex); //read the numerical number portion of string only
+                bool gotArea = Int32.TryParse(tHTMLDOM, out area);  //convert numerial string to number
+                return gotArea ? area : -1;
+            }catch(Exception e)
+            {
+                Console.WriteLine("Couldnot get getAreaInfo");
+                return -101;
             }
-            startIndex++; //startIndex points to > when we want it to point to the next character which is part of house #
-            tHTMLDOM = tHTMLDOM.Substring(startIndex, endIndex - startIndex); //read the numerical number portion of string only
-            bool gotArea = Int32.TryParse(tHTMLDOM, out area);  //convert numerial string to number
-            return gotArea ? area : -1;
+            
         }
         static int getAreaUpdated(string HTMLDOM){
-            string usefulSelector ="\"ds-bed-bath-living-area\"><span>";
-            int startIndex = HTMLDOM.IndexOf(usefulSelector)+32;
-            int endIndex = HTMLDOM.IndexOf("<",startIndex);
-            string areaStr = HTMLDOM.Substring(startIndex,endIndex-startIndex);
-            areaStr = areaStr.Replace(",","");
-            int area;
-            bool convertedSucessfully = Int32.TryParse(areaStr, out area);
-            return convertedSucessfully? area :-1;
+            try
+            {
+                string usefulSelector = "\"ds-bed-bath-living-area\"><span>";
+                int startIndex = HTMLDOM.IndexOf(usefulSelector) + 32;
+                int endIndex = HTMLDOM.IndexOf("<", startIndex);
+                string areaStr = HTMLDOM.Substring(startIndex, endIndex - startIndex);
+                areaStr = areaStr.Replace(",", "");
+                int area;
+                bool convertedSucessfully = Int32.TryParse(areaStr, out area);
+                return convertedSucessfully ? area : -1;
+            }catch(Exception e)
+            {
+                Console.WriteLine("Couldnot get getAreaUpdated");
+                return -101;
+            }
+            
         }
         static float getNumberOfBeds(string tHTMLDOM) //bed text has form like: <span>4 beds</span>
         {
-            float numOfBeds;
-            int startIndex = tHTMLDOM.IndexOf("<span>") + 6; //+6 b/c it returns begining point of '<' tag and we dont wanan read <span>
-            int endIndex = tHTMLDOM.IndexOf(" beds");
-            tHTMLDOM = tHTMLDOM.Substring(startIndex, endIndex - startIndex);
-            bool gotNumOfBeds = float.TryParse(tHTMLDOM, out numOfBeds);
-            return gotNumOfBeds ? numOfBeds : -1; //if gotNumOfBeds true then return numOfBeds else -1
+            try
+            {
+                float numOfBeds;
+                int startIndex = tHTMLDOM.IndexOf("<span>") + 6; //+6 b/c it returns begining point of '<' tag and we dont wanan read <span>
+                int endIndex = tHTMLDOM.IndexOf(" beds");
+                tHTMLDOM = tHTMLDOM.Substring(startIndex, endIndex - startIndex);
+                bool gotNumOfBeds = float.TryParse(tHTMLDOM, out numOfBeds);
+                return gotNumOfBeds ? numOfBeds : -1; //if gotNumOfBeds true then return numOfBeds else -1
+            }catch(Exception e)
+            {
+                Console.WriteLine("Couldnot get getNumberOfBeds");
+                return -101;
+            }
+            
         }
 
         static float getNumberOfBedsUpdated(string HTMLDOM){
-            float numOfBeds;
-            string usefulSelector = "ds-vertical-divider ds-bed-bath-living-area\"><span>";
-            int startIndex = HTMLDOM.IndexOf(usefulSelector)+51;
-            int endIndex = HTMLDOM.IndexOf("<",startIndex);
-            string bedStr = HTMLDOM.Substring(startIndex,endIndex-startIndex);
-            bool convertedToFloat= float.TryParse(bedStr, out numOfBeds);
-            return convertedToFloat? numOfBeds: (float)-2.2;
+            try
+            {
+                float numOfBeds;
+                string usefulSelector = "ds-vertical-divider ds-bed-bath-living-area\"><span>";
+                int startIndex = HTMLDOM.IndexOf(usefulSelector) + 51;
+                int endIndex = HTMLDOM.IndexOf("<", startIndex);
+                string bedStr = HTMLDOM.Substring(startIndex, endIndex - startIndex);
+                bool convertedToFloat = float.TryParse(bedStr, out numOfBeds);
+                return convertedToFloat ? numOfBeds : (float)-2.2;
+            }catch(Exception e)
+            {
+                Console.WriteLine("Couldnot get getNumberOfBeds");
+                return -101;
+            }
+            
         }
 
         static float getNumberOfBaths(string tHTMLDOM) //bed text has form like: <span>4 beds</span>
         {
-            float numberOfBaths;
-            int endIndex = tHTMLDOM.IndexOf(" baths");
-            int startIndex = endIndex;
-
-            //# of bath comes after <span> tag so keep reading until u come across '>' (we are reading from the end to begining thats why we are looking for '>')
-            while (tHTMLDOM[startIndex] != '>')
+            try
             {
-                startIndex--; //using the string " baths" work backwards in determining # of baths
+                float numberOfBaths;
+                int endIndex = tHTMLDOM.IndexOf(" bath");
+                int startIndex = endIndex;
+
+                //# of bath comes after <span> tag so keep reading until u come across '>' (we are reading from the end to begining thats why we are looking for '>')
+                while (tHTMLDOM[startIndex] != '>')
+                {
+                    startIndex--; //using the string " baths" work backwards in determining # of baths
+                }
+                startIndex++; //b.c startIndex points to the index of > and the number comes right after that
+                tHTMLDOM = tHTMLDOM.Substring(startIndex, endIndex - startIndex);
+                bool getBath = float.TryParse(tHTMLDOM, out numberOfBaths); //if sucess then getBath is true
+                return getBath ? numberOfBaths : -1;
+            }catch (Exception e)
+            {
+                Console.WriteLine("Couldnot get getNumberOfBaths");
+                return -101;
             }
-            startIndex++; //b.c startIndex points to the index of > and the number comes right after that
-            tHTMLDOM = tHTMLDOM.Substring(startIndex, endIndex - startIndex);
-            bool getBath = float.TryParse(tHTMLDOM, out numberOfBaths); //if sucess then getBath is true
-            return getBath ? numberOfBaths : -1;
+
         }
         static float getNumberOfBathsUpdated(string HTMLDOM){
-            float numOfBaths;
-            string usefulSelector = "ds-vertical-divider ds-bed-bath-living-area\"><span>";
-            int startIndex = HTMLDOM.IndexOf(usefulSelector)+51;
-            startIndex = HTMLDOM.IndexOf(usefulSelector,startIndex)+51; //2nd occurance is for baths
-            int endIndex = HTMLDOM.IndexOf("<",startIndex);
-            string bathStr = HTMLDOM.Substring(startIndex,endIndex-startIndex);
-            bool convertedToFloat= float.TryParse(bathStr, out numOfBaths);
-            return convertedToFloat? numOfBaths: (float)-2.2;
+            try
+            {
+                float numOfBaths;
+                string usefulSelector = "ds-vertical-divider ds-bed-bath-living-area\"><span>";
+                int startIndex = HTMLDOM.IndexOf(usefulSelector) + 51;
+                startIndex = HTMLDOM.IndexOf(usefulSelector, startIndex) + 51; //2nd occurance is for baths
+                int endIndex = HTMLDOM.IndexOf("<", startIndex);
+                string bathStr = HTMLDOM.Substring(startIndex, endIndex - startIndex);
+                bool convertedToFloat = float.TryParse(bathStr, out numOfBaths);
+                return convertedToFloat ? numOfBaths : (float)-2.2;
+
+            }catch (Exception e)
+            {
+                Console.WriteLine("Couldnot get getNumberOfBaths");
+                return -101;
+            }
+
         }
         static WebClient SetHeaders(WebClient client)
         {
