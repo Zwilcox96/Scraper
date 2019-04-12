@@ -1,5 +1,6 @@
-﻿using HtmlAgilityPack;
+﻿
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Linq;
 using System.Collections.Generic;
@@ -10,86 +11,87 @@ namespace scraper
     {
         static void Main(string[] args)
         {
-            //string infoArr = "hey this is Amit the greatest. Amit is coolest person i know. He rocks at everything.Amit is so cool yar yall dont even know.";
-           //FindString(infoArr);
-            
             //assume house info is given like this...
-            int houseNumber = 1528;
-            string streetname = "Hutchison Valley Dr";  //last term has to be abbrebiated(need to see if map api does that)
+            int houseNumber = 10 ;
+            string streetname = "Collins Pl"; 
             string city = "Woodland";
             string state = "CA";
             int zip = 95776;
             string lastTag = "_rb/";
             List<House> houses = new List<House>();
 
+            Stopwatch timer = new Stopwatch();
+            timer.Start();
             House house = new House(houseNumber, streetname, city, state, zip);
-            house.fetchInfo();
-
-            House house2 = new House(5705, "Regan Hall Ln", "Carmichael", "CA", 95608);
-            house2.fetchInfo();
-            for(int i = 0; i < 10000; i++)
-            {
-                houses.Add(house);
-                houses.Add(house2);
-
-            }
-            
-
-            string zillowURL = GenerateURL(houseNumber, streetname, city, state, zip, lastTag); //generate the URL string
-            WebClient client = new WebClient();
-            client = SetHeaders(client);
-            string html = client.DownloadString(zillowURL);
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(html);
-          
-            string AddressText = htmlDoc.DocumentNode.SelectSingleNode("//head/title").OuterHtml; //contains address embeded in title tag
-            string roomsText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[2]").OuterHtml; //room info is embeded in this string
-            string bathText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[4]").OuterHtml;
-            string areaText = htmlDoc.DocumentNode.SelectSingleNode("//h3/span[6]").OuterHtml;
-            string zestimateText = htmlDoc.DocumentNode.SelectSingleNode("//div[contains(@class, 'zestimate primary-quote')]/div").OuterHtml;
+            House house2 = new House(543, "Feather River Way", "vacaville","ca", 95688);
+            House house3 = new House(1527, "hutchison valley dr", "woodland","ca",95776);
+            House house4 = new House(1944, "Hackett  dr", "woodland","ca",95776);
+            House house5 = new House(1563 , "Carmel Valley Dr", "woodland","ca",95776);
+            House house6 = new House(967, "Bourn Dr", "woodland","ca",95776);
+            var h1 = house.fetchInfo();
+            var h2 = house2.fetchInfo();
+            var h3 = house3.fetchInfo();
+            var h4 = house4.fetchInfo();
+            var h5 = house5.fetchInfo();
+            var h6 = house6.fetchInfo();
 
 
-            //couldnt do this :( zillow uses script for generating solarNumber and cant get past that
-            //string solarFactorText = htmlDoc.DocumentNode.SelectSingleNode("//div[contains(@class, 'truncated')]").OuterHtml;
+            h1.Wait();
+            Console.WriteLine("first house done!");
+            h2.Wait();
+            Console.WriteLine("Second house done!");
+            h3.Wait();
+            Console.WriteLine("3 house done!");
+            h4.Wait();
+            Console.WriteLine("4 house done!");
+            h5.Wait();
+            Console.WriteLine("5 house done!");
+            h6.Wait();
+            Console.WriteLine("6 house done!");
 
+            timer.Stop();
+            TimeSpan ts = timer.Elapsed;
+            Console.WriteLine("min: " + ts.Minutes + "sec: " + ts.Seconds);
+            //this code is moved to house class
             /*
-             * AddRemainingHouses()
-             * in html file:
-             * 
-             * find: zsg-photo-card-price
-             * grab price by using $ to find recent index (zestimate, some zestimate values maynot be clean...)
-             * grab property by searching for: property-beds 
-             * grab address by using this: zsg-photo-card-address
-             * 
-             * 
-             */
-            
-            //Console.WriteLine(solarFactorText);
-            //return numerical value of those fields
-            
-            string houseAddress = getHouseAddress(AddressText);
-            int numberOfBaths = getNumberOfBaths(bathText); 
-            int numberOfBeds = getNumberOfBeds(roomsText);
-            int areaInSqFt = getAreaInfo(areaText);
-            int Zestimate = getZestimate(zestimateText);
+            string zillowURL = GenerateURL(houseNumber, streetname, city, state, zip, lastTag);
+            string ApiKey = "fae228e0fcd20c4676bf1ea0cc2a1514";
 
+            //we need to do get request to the scraperapi and thats the link
+            string scraperLink = "http://api.scraperapi.com?api_key=" + ApiKey + "&url="+ zillowURL;
+            WebRequest wrGETURL = WebRequest.Create(scraperLink);
+            Stream outputStream = wrGETURL.GetResponse().GetResponseStream();
+            StreamReader zillowInfo = new StreamReader(outputStream);
+            string StrZillowInfo = zillowInfo.ReadToEnd();
 
-            //FindString(html);
-            //foreach (House curHouse in houses)
-            //{
-            //    Console.WriteLine("For house: " + curHouse.houseAddress);
-            //    Console.WriteLine(curHouse.areaInSqFt + " is area");
-            //    Console.WriteLine(curHouse.numberOfBeds + " is number of beds");
-            //    Console.WriteLine(curHouse.numberOfBaths + " is number of baths");
-            //    Console.WriteLine(curHouse.zestimate + " is the estimated price of home.");
-            //}
-            Console.WriteLine(Analytics.getAverageSquareFootage(houses) + " is average area");
-            Console.WriteLine(Analytics.getAverageBedrooms(houses) + " is number of beds");
-            Console.WriteLine(Analytics.getAverageBathrooms(houses) + " is number of baths");
-            Console.WriteLine(Analytics.getAverageZestimate(houses) + " is the estimated price of home.");
+            //beds,bath and area info. are really close to each other and to prevent 3 un-necessary searches to whole DOM we are going to trim it
+            int hInfoStartIndex = StrZillowInfo.IndexOf("middle-dot"); //houseInfoStartIndex which contains index where useful(bed,rooms,sqft info are closely located)
+            int hInfoEndIndex = StrZillowInfo.IndexOf("</h3>");//houseInfoEndIndex
+
+            //StrZillowInfo contained almost 10k characters, this will contain less than 5% thus removing searching in un-necessary area of the document
+            string hInfoReferenceStr = StrZillowInfo.Substring(hInfoStartIndex, hInfoEndIndex- hInfoStartIndex);
+            string AddressText = getHouseAddress(StrZillowInfo);
+            Console.WriteLine("Address is: " + AddressText);
+            float numberOfBeds = getNumberOfBeds(hInfoReferenceStr);
+            Console.WriteLine("Beds is: " + numberOfBeds);
+            float numberOfBaths = getNumberOfBaths(hInfoReferenceStr);
+            Console.WriteLine("Number of bath is " + numberOfBaths);
+            int areaInSqFt = getAreaInfo(hInfoReferenceStr);
+            Console.WriteLine(" Area is " + areaInSqFt);
+            int zestimate = getZestimate(StrZillowInfo);
+            Console.WriteLine("ZESTIMATE: " + zestimate);
+            */
             Console.Read();
         }
-        
+        static void printHouseInfo(House home)
+        {
+            Console.WriteLine("Address: " + home.houseAddress);
+            Console.WriteLine("beds: " + home.numberOfBeds);
+            Console.WriteLine("baths: " + home.numberOfBaths);
+            Console.WriteLine("Zestimate: " + home.zestimate);
+            Console.WriteLine("Area: " + home.areaInSqFt);
+
+        }
         static string GenerateURL(int houseNumber, string street,string city,string state, int zipcode, string lastTag)
         {
             string url = "https://www.zillow.com/homes/";
@@ -100,53 +102,71 @@ namespace scraper
             return url;
         }
 
-        //houseText format: <title>1528 Hutchison Valley Dr, Woodland, CA 95776 | Zillow</title>
+        
         //return address without the tags
-        static string getHouseAddress(string houseText) 
+        static string getHouseAddress(string HTMLCode) 
         {
-            int endTagIndex = houseText.IndexOf('|'); //stop reading when we see |
-            int NumCharToRead = endTagIndex - 7;
-            string address = houseText.Substring(7,NumCharToRead); //starting @ index 7 read  NumCharToRead many characters
+            int AddressTagLocation = HTMLCode.IndexOf("<title>");
+            int endTagIndex = HTMLCode.IndexOf('|', AddressTagLocation); //stop reading when we see | after addresstag
+            int NumCharToRead = endTagIndex - AddressTagLocation- 7; //7 b/c <title> is 7 char. long
+            string address = HTMLCode.Substring(AddressTagLocation+7, NumCharToRead);
             return address;
         }
+
+        
         static int getZestimate(string zestimateText)
         {
+            int zestimation; //var to store zestimate value
             //find index of $ symbol, and find index of </div>
-            int dollarSign = zestimateText.IndexOf('$');
-            int endOfZestimate = zestimateText.LastIndexOf('<');
-            int charToRead = endOfZestimate - dollarSign-1;  //how many characters to read
-            zestimateText = zestimateText.Substring(dollarSign + 1,charToRead); //dollarsing+1 b/c we care about number after $ 
+            int startIndex = zestimateText.IndexOf("Home Value: $") +13;
+            int endOfZestimate = zestimateText.IndexOf(".", startIndex);
+            zestimateText = zestimateText.Substring(startIndex, endOfZestimate- startIndex); //dollarsing+1 b/c we care about number after $ 
             zestimateText = zestimateText.Replace(",", "");
-            int zestimation = Int32.Parse(zestimateText);
-            return zestimation;
+            bool gotZestimation = Int32.TryParse(zestimateText, out zestimation);
+            return gotZestimation ? zestimation : -1;
         }
 
-        static int getAreaInfo(string areaText) //areaText format: <span>2,247 sqft</span>
+        static int getAreaInfo(string tHTMLDOM) //areaText format: <span>2,247 sqft</span>
         {
-            int spaceIndex = areaText.IndexOf(' '); //index used to determine end of square feet information
-            int startIndex = 6;  //starting index is 6 b/c "<span>" takes indexes 0-5
-            areaText = areaText.Replace(",", ""); // replace comma with nothing
-            areaText = areaText.Substring(startIndex,spaceIndex-startIndex); //read the numerical number portion of string only
-            int area = Int32.Parse(areaText);  //convert numerial string to number
-            return area;
+            int area;
+            tHTMLDOM = tHTMLDOM.Replace(",", ""); // replace comma with nothing
+            int endIndex = tHTMLDOM.IndexOf("sqft</span>"); 
+            int startIndex = endIndex;
+            while (tHTMLDOM[startIndex] != '>')
+            {
+                startIndex--;
+            }
+            startIndex++; //startIndex points to > when we want it to point to the next character which is part of house #
+            tHTMLDOM = tHTMLDOM.Substring(startIndex, endIndex - startIndex); //read the numerical number portion of string only
+            bool gotArea = Int32.TryParse(tHTMLDOM, out area);  //convert numerial string to number
+            return gotArea? area : -1;
         }
 
-        static int getNumberOfBeds(string bedText) //bed text has form like: <span>4 beds</span>
+        static float getNumberOfBeds(string tHTMLDOM) //trimmed HTMLDOM
         {
-          int bIndex = bedText.IndexOf(' '); //determine we are done reading numbers
-          int startIndex = 6; 
-          bedText = bedText.Substring(startIndex, bIndex-startIndex);
-          int bedCount = Int32.Parse(bedText);
-          return bedCount;
+            float numOfBeds;
+            int startIndex = tHTMLDOM.IndexOf("<span>") + 6; //+6 b/c it returns begining point of '<' tag and we dont wanan read <span>
+            int endIndex = tHTMLDOM.IndexOf(" beds");
+            tHTMLDOM = tHTMLDOM.Substring(startIndex, endIndex-startIndex);
+            bool gotNumOfBeds = float.TryParse(tHTMLDOM, out numOfBeds);
+            return gotNumOfBeds ? numOfBeds : -1; //if gotNumOfBeds true then return numOfBeds else -1
         }
 
-        static int getNumberOfBaths(string bathText) //bed text has form like: <span>4 beds</span>
+        static float getNumberOfBaths(string tHTMLDOM) //bed text has form like: <span>4 beds</span>
         {
-            int bIndex = bathText.IndexOf('b'); //determine we are done reading numbers
-            int startIndex = 6;  //starting index is 6 b/c <span> takes indexes 0-5
-            bathText = bathText.Substring(startIndex, bIndex - 6);
-            int bathCount = Int32.Parse(bathText);
-            return bathCount;
+            float numberOfBaths;
+            int endIndex = tHTMLDOM.IndexOf(" baths");
+            int startIndex = endIndex;
+
+            //# of bath comes after <span> tag so keep reading until u come across '>' (we are reading from the end to begining thats why we are looking for '>')
+            while (tHTMLDOM[startIndex] != '>')
+            {
+                startIndex--; //using the string " baths" work backwards in determining # of baths
+            }
+            startIndex++; //b.c startIndex points to the index of > and the number comes right after that
+            tHTMLDOM = tHTMLDOM.Substring(startIndex, endIndex - startIndex);
+            bool getBath = float.TryParse(tHTMLDOM, out numberOfBaths); //if sucess then getBath is true
+            return getBath ? numberOfBaths : -1;
         }
 
         static WebClient SetHeaders(WebClient client)
@@ -160,7 +180,7 @@ namespace scraper
         }
 
         //this is to test indexOf method of string class
-        static void FindString(string htmlDOM)
+        static void FindNeighbors(string htmlDOM)
         {
             int currentIndex = 0; //where we are within the arr of data
             //zsg-photo-card-price">$
@@ -168,29 +188,28 @@ namespace scraper
             int usefulClassLength = usefulClass.Length;
             int usefulClassIndex = 0; //index which holds where the 'usefulClass' is in the string
 
-            //the first house info that comes after hdpURl is the one we just grabbed info on so we can skip it.
+            //the first house info that comes after hdpURl is the main house for which we already grabbed info on so we can skip it.
             usefulClassIndex = htmlDOM.IndexOf(usefulClass, currentIndex); //find where usefulClass is in DOM
             currentIndex = usefulClassIndex + 1;
+
+            //for each neighbor
             do
             {
                 usefulClassIndex = htmlDOM.IndexOf(usefulClass, currentIndex); //find where usefulClass is in DOM
                 if(usefulClassIndex != -1)
                 {
-                    //address
-                    double NumBeds = GetBeds(htmlDOM, usefulClassIndex);
-                    double NumBaths = GetBaths(htmlDOM, usefulClassIndex);
-                    int HouseArea = GetArea(htmlDOM, usefulClassIndex);
-                    string zestimate = GetZestimate(htmlDOM, usefulClassIndex, usefulClassLength);
-                    string Address = GetAddress(htmlDOM, usefulClassIndex);
+                    float NumBeds = GetNeighborsBeds(htmlDOM, usefulClassIndex);
+                    float NumBaths = GetNeighborsBaths(htmlDOM, usefulClassIndex);
+                    int HouseArea = GetNeighborsArea(htmlDOM, usefulClassIndex);
+                    string zestimate = GetNeighborsZestimate(htmlDOM, usefulClassIndex, usefulClassLength);
+                    string Address = GetNeighborsAddress(htmlDOM, usefulClassIndex);
                     Console.WriteLine(Address + "  Beds:" + NumBeds + " Baths: " + NumBaths + " HouseArea: " + HouseArea + "Zestimate: " + zestimate);
                     currentIndex = usefulClassIndex + 1;
                 }
             } while (usefulClassIndex != -1);
-            
-            Console.ReadLine();
         }
 
-        static string GetAddress(string htmlDOM, int houseInfoIndex)
+        static string GetNeighborsAddress(string htmlDOM, int houseInfoIndex)
         {
             string AddressAttribute = "\"streetAddress\":\"";
             int AddressIndex = htmlDOM.IndexOf(AddressAttribute, houseInfoIndex); //find "Address" after "hdpUrl"
@@ -203,7 +222,7 @@ namespace scraper
             return AddressString;
         }
 
-        static int GetArea (string htmlDOM, int houseInfoIndex)
+        static int GetNeighborsArea (string htmlDOM, int houseInfoIndex)
         {
             string areaAttribute = "\"livingArea\":";
             int areaIndex = htmlDOM.IndexOf(areaAttribute, houseInfoIndex); //find "area" after "hdpUrl"
@@ -225,7 +244,7 @@ namespace scraper
             return numareas;
         }
 
-        static double GetBaths(string htmlDOM, int houseInfoIndex) 
+        static float GetNeighborsBaths(string htmlDOM, int houseInfoIndex) 
         {
             string bathAttribute = "\"bathrooms\":";
             int bathIndex = htmlDOM.IndexOf(bathAttribute, houseInfoIndex); //find "bath" after "hdpUrl"
@@ -235,10 +254,10 @@ namespace scraper
             int readUntilComma = commaIndex - startIndex;
 
             string numBathString = htmlDOM.Substring(startIndex, readUntilComma);
-            double numbaths;
-            if (Double.TryParse(numBathString, out numbaths))
+            float numbaths;
+            if (float.TryParse(numBathString, out numbaths))
             {
-                numbaths = Double.Parse(numBathString);
+                numbaths = float.Parse(numBathString);
             }
             else
             {
@@ -247,7 +266,7 @@ namespace scraper
             return numbaths;
         }
 
-        static double GetBeds(string htmlDOM, int houseInfoIndex)
+        static float GetNeighborsBeds(string htmlDOM, int houseInfoIndex)
         {
             string bedAttribute = "\"bedrooms\":";
             int bedIndex = htmlDOM.IndexOf(bedAttribute, houseInfoIndex); //find "bed" after "hdpUrl"
@@ -257,10 +276,10 @@ namespace scraper
             int readUntilComma = commaIndex - startIndex;
 
             string numBedString = htmlDOM.Substring(startIndex, readUntilComma);
-            double numBeds;
-            if(Double.TryParse(numBedString,out numBeds))
+            float numBeds;
+            if(float.TryParse(numBedString,out numBeds))
             {
-                numBeds = Double.Parse(numBedString);
+                numBeds = float.Parse(numBedString);
             }
             else
             {
@@ -269,7 +288,7 @@ namespace scraper
             return numBeds;
         }
  
-        static string GetZestimate(string htmlDOM,int usefulClassIndex, int usefulClassLength)
+        static string GetNeighborsZestimate(string htmlDOM,int usefulClassIndex, int usefulClassLength)
         {
             string priceAttribute = "\"price\":";
             int priceIndex = htmlDOM.IndexOf(priceAttribute, usefulClassIndex); //find "price" after "hdpUrl"
@@ -279,7 +298,6 @@ namespace scraper
             int readUntilComma = commaIndex - startIndex;
 
             string zestimateString = htmlDOM.Substring(startIndex, readUntilComma);
-            Console.WriteLine(zestimateString);
             return zestimateString;
         }
 
