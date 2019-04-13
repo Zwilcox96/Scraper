@@ -25,12 +25,12 @@ namespace scraper
             timer.Start();
 
             //add houses to the houses
-            housesList.Add(new House(houseNumber, streetname, city, state, zip));
-            //housesList.Add(new House(438, "Greenbrier Ct", "Benicia", "ca", 94510));
+            //housesList.Add(new House(houseNumber, streetname, city, state, zip));
+            housesList.Add(new House(438, "Greenbrier Ct", "Benicia", "ca", 94510));
             //housesList.Add(new House(414, "12th Ave", "San Francisco", "ca", 94118));
             //housesList.Add(new House(730, "Funston Ave", "San Francisco", "ca", 94118));
-            housesList.Add(new House(233, "Del Loma Ct", "Fairfield", "ca", 94533));
-            housesList.Add(new House(123, "Tustin Ct", "Benicia", "ca", 94510));
+            //housesList.Add(new House(233, "Del Loma Ct", "Fairfield", "ca", 94533));
+            //housesList.Add(new House(123, "Tustin Ct", "Benicia", "ca", 94510));
 
             int numOfHouses = housesList.Count;
             Task[] GrabHouseInfo = new Task[numOfHouses];
@@ -57,7 +57,7 @@ namespace scraper
             }
 
 
-            Console.WriteLine("AVG HOUSE INFO: ");
+            Console.WriteLine("\n\n\n\nAVG HOUSE INFO: ");
             Console.WriteLine("=======================================================================");
             double avgZestimate = Analytics.getAverageZestimate(housesList);
             double avgBath = Analytics.getAverageBathrooms(housesList);
