@@ -30,7 +30,6 @@ namespace scraper
             this.city = city;
             this.state = state;
             this.zip = zip;
-            //zillowURL = getZillowURL();
         }
 
 
@@ -45,84 +44,113 @@ namespace scraper
             return url;
         }
 
-        public async Task fetchInfo()
+        public async Task fetchInfoAsync()
         {
-            string ApiKey = "dee44cef6befc7cb5de3fb93f1d5e14e";
-            string scraperLink = "http://api.scraperapi.com?api_key=" + ApiKey + "&url=" + getZillowURL()+"&premium=true";
-            
+            string ApiKey = "fae228e0fcd20c4676bf1ea0cc2a1514";
+            string scraperLink = "http://api.scraperapi.com?api_key=" + ApiKey + "&url=" + getZillowURL();
             HttpClient scraperAPI = new HttpClient();
-            HttpResponseMessage  zillowInfo = await scraperAPI.GetAsync(scraperLink);
-
-            int statusCode = (int) zillowInfo.StatusCode;
+            HttpResponseMessage zillowInfo = await scraperAPI.GetAsync(scraperLink);
+            int statusCode = (int)zillowInfo.StatusCode;
+            //if we sucessfully got house info then read it and parse it(WHICH IS 98 PERCENT OF  THE TIME, according to the scraper)
             if (statusCode == 200)
             {
                 string StrZillowInfo = await zillowInfo.Content.ReadAsStringAsync();
                 parseHTML(StrZillowInfo);
             }
-            else if(statusCode == 500)
+            else if (statusCode == 500) //if the api call fails the first time which is 2% OF THE TIME
             {
-                Console.WriteLine("api failed trying again!");
-                zillowInfo = await scraperAPI.GetAsync(scraperLink);
-                statusCode = (int)zillowInfo.StatusCode;
-                if (statusCode == 200)
-                {
-                     Console.WriteLine("api worked!");
-                    string StrZillowInfo = await zillowInfo.Content.ReadAsStringAsync();
-                    parseHTML(StrZillowInfo);
-                }else Console.WriteLine("api failed yet again!");
+                var retrying = retryApi(statusCode, scraperLink); //retryAPI asks upto 10 times until it sucessfully gets the data
+                retrying.Wait();
+            }
+            else //if status code is not 500 or 200 in the frist call, then we reached our api limit or concurrent limit
+            {
+              APIError(statusCode);
             }
 
         }
-        private void PrintError(int errorCode)
+
+        private async Task retryApi(int statusCode, string scraperLink)
+        {
+            HttpClient scraperAPI = new HttpClient();
+            HttpResponseMessage zillowInfo = await scraperAPI.GetAsync(scraperLink);
+
+            for (int i = 0; statusCode != 200 && i < 10; i++) //call api until you sucessfully get info. from zillow or until you have tried 10 times
+            {
+                Console.WriteLine("api failed trying again!");
+                zillowInfo = await scraperAPI.GetAsync(scraperLink); //grab data from api
+                statusCode = (int)zillowInfo.StatusCode; //see if we sucessfully got it
+                if (statusCode == 200)
+                {
+                    Console.WriteLine("api worked!");
+                    string StrZillowInfo = await zillowInfo.Content.ReadAsStringAsync();
+                    parseHTML(StrZillowInfo);
+                }
+            }
+            //if we dont sucessfully get info from zillow after 10 api calls then assign negative value to baths,beds, zestimate to inform user
+            if (statusCode != 200)
+            {
+                updateAPIErrorCode(-401); //assingn 401 as error msg to inform user that api calls kept on failing 10x in row
+            }
+        }
+        //if error occurs 
+        private void APIError(int errorCode)
         {
           Console.WriteLine("Error occured!!!");
           switch(errorCode)
            {
-             case 500:
-               Console.WriteLine("cannot get data from api call. Request failed despite retring for 60 seconds");
-               break;
              case 429:
-               Console.WriteLine("Exceeding api request calls in our plan");
+               Console.WriteLine("Exceeding concurrent api request calls in our plan");
+               updateAPIErrorCode(-429);
                break;
-          }
+             case 403:
+               Console.WriteLine("Exceeding # of api request calls in our plan");
+               updateAPIErrorCode(-403);
+               break;
+            }
         }
-        private void parseHTML(String StrZillowInfo)
+
+        //this method is only called if the scraperApi fails, and sets
+        //all fields to either -403, -429
+        private void updateAPIErrorCode(int err_code)
         {
-            //beds,bath and area info. are close to each other and to prevent 3 un-necessary searches to whole DOM
-            //which is 10k characters long, we are going to trim it
+            if (err_code == 429 || err_code == 403 || err_code == -401)
+            {
+                numberOfBaths = err_code;
+                numberOfBeds = err_code;
+                zestimate = err_code;
+                areaInSqFt = err_code;
+                houseAddress = "error code " + err_code;
+            }
+        }
+        private void parseHTML(string StrZillowInfo)
+        {
+            //OLD HOUSE PROFILE HAS middle-dot as classname
             int hInfoStartIndex = StrZillowInfo.IndexOf("middle-dot"); //houseInfoStartIndex 
             int hInfoEndIndex = StrZillowInfo.IndexOf("</h3>");//houseInfoEndIndex
-            
-            //either zillow coudlnt find that house or 
-            //it has the updated page(some pages in zillow are updated) and old parsing might not work
+             
+            //if middle-dot cant be found then the house's info. is organized in different template so we need to try different parsing
             if(hInfoStartIndex == -1)
             {
               Console.WriteLine("grabbed from updated profile page:\n");
               houseAddress = getHouseAddress(StrZillowInfo);
+              
+               //notice new parsing techniques have Updated at the end
               zestimate = getZestimateUpdated(StrZillowInfo);
               numberOfBeds = getNumberOfBedsUpdated(StrZillowInfo);
               numberOfBaths = getNumberOfBathsUpdated(StrZillowInfo);
               areaInSqFt = getAreaUpdated(StrZillowInfo);
-              
-             Console.WriteLine(houseAddress + "\n BED: "+numberOfBeds+"\n BATH: "+numberOfBaths+ "\n Area: "+areaInSqFt+ "\n Zestimate: "+zestimate);
             }
-            //old zillow formated house profile
+            //When hInfoStartIndex can be found, house's info. is organized in template that has middle-dot, so this parsing will work 
             else{
-             //StrZillowInfo contained almost 10k characters, this will contain less than 5% thus removing searching in un-necessary area of the document
+             //StrZillowInfo contained almost 10k characters, this will contain less than 5% thus removing searching in un-necessary area of the document and make it bit faster
             string hInfoReferenceStr = StrZillowInfo.Substring(hInfoStartIndex, hInfoEndIndex - hInfoStartIndex);
             houseAddress = getHouseAddress(StrZillowInfo);
             numberOfBeds = getNumberOfBeds(hInfoReferenceStr);
             numberOfBaths = getNumberOfBaths(hInfoReferenceStr);
             areaInSqFt = getAreaInfo(hInfoReferenceStr);
             zestimate = getZestimate(StrZillowInfo);
-            Console.WriteLine("Address: " + houseAddress);
-            Console.WriteLine("beds: " + numberOfBeds);
-            Console.WriteLine("baths: " + numberOfBaths);
-            Console.WriteLine("Area: " + areaInSqFt);
-            Console.WriteLine("Zestimate: " + zestimate);
             }
         }
-        
 
         //houseText format: <title>1528 Hutchison Valley Dr, Woodland, CA 95776 | Zillow</title>
         //return address without the tags
@@ -170,6 +198,7 @@ namespace scraper
             }catch(Exception e)
             {
                 Console.WriteLine("could not get zestimate!");
+                Console.WriteLine(zestimateText);
                 return -101;
             }
             
@@ -190,6 +219,7 @@ namespace scraper
             }catch(Exception e)
             {
                 Console.WriteLine("Couldnot get getZestimateUpdated");
+                Console.WriteLine(zestimateText);
                 return -101;
             }
             
@@ -314,14 +344,13 @@ namespace scraper
             }
 
         }
-        static WebClient SetHeaders(WebClient client)
+       public void printInfo()
         {
-            client.Headers[HttpRequestHeader.Accept] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8";
-            client.Headers[HttpRequestHeader.AcceptEncoding] = "identity";
-            client.Headers[HttpRequestHeader.AcceptLanguage] = "en-US,en;q=0.9";
-            client.Headers[HttpRequestHeader.Upgrade] = "1";
-            client.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36";
-            return client;
+            Console.WriteLine("Address: " + houseAddress);
+            Console.WriteLine("beds: " + numberOfBeds);
+            Console.WriteLine("baths: " + numberOfBaths);
+            Console.WriteLine("Area: " + areaInSqFt);
+            Console.WriteLine("Zestimate: " + zestimate);
         }
     }
 }
