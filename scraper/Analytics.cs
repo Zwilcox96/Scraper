@@ -36,5 +36,6 @@ namespace scraper
                                  select house.numberOfBaths;
             return houseBathrooms.DefaultIfEmpty(0).Average();
         }
+
     }
 }

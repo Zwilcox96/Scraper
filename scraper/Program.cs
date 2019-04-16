@@ -30,7 +30,7 @@ namespace scraper
             House house6 = new House(967, "Bourn Dr", "woodland","ca",95776);
             var h1 = house.fetchInfo();
             var h2 = house2.fetchInfo();
-            var h3 = house3.fetchInfo();
+            var h3 = house3.fetchInfo();    
             var h4 = house4.fetchInfo();
             var h5 = house5.fetchInfo();
             var h6 = house6.fetchInfo();
@@ -52,35 +52,15 @@ namespace scraper
             timer.Stop();
             TimeSpan ts = timer.Elapsed;
             Console.WriteLine("min: " + ts.Minutes + "sec: " + ts.Seconds);
-            //this code is moved to house class
-            /*
-            string zillowURL = GenerateURL(houseNumber, streetname, city, state, zip, lastTag);
-            string ApiKey = "fae228e0fcd20c4676bf1ea0cc2a1514";
 
-            //we need to do get request to the scraperapi and thats the link
-            string scraperLink = "http://api.scraperapi.com?api_key=" + ApiKey + "&url="+ zillowURL;
-            WebRequest wrGETURL = WebRequest.Create(scraperLink);
-            Stream outputStream = wrGETURL.GetResponse().GetResponseStream();
-            StreamReader zillowInfo = new StreamReader(outputStream);
-            string StrZillowInfo = zillowInfo.ReadToEnd();
+            houses.Add(house);
+            houses.Add(house2);
+            houses.Add(house3);
+            houses.Add(house4);
+            houses.Add(house5);
+            houses.Add(house6);
 
-            //beds,bath and area info. are really close to each other and to prevent 3 un-necessary searches to whole DOM we are going to trim it
-            int hInfoStartIndex = StrZillowInfo.IndexOf("middle-dot"); //houseInfoStartIndex which contains index where useful(bed,rooms,sqft info are closely located)
-            int hInfoEndIndex = StrZillowInfo.IndexOf("</h3>");//houseInfoEndIndex
-
-            //StrZillowInfo contained almost 10k characters, this will contain less than 5% thus removing searching in un-necessary area of the document
-            string hInfoReferenceStr = StrZillowInfo.Substring(hInfoStartIndex, hInfoEndIndex- hInfoStartIndex);
-            string AddressText = getHouseAddress(StrZillowInfo);
-            Console.WriteLine("Address is: " + AddressText);
-            float numberOfBeds = getNumberOfBeds(hInfoReferenceStr);
-            Console.WriteLine("Beds is: " + numberOfBeds);
-            float numberOfBaths = getNumberOfBaths(hInfoReferenceStr);
-            Console.WriteLine("Number of bath is " + numberOfBaths);
-            int areaInSqFt = getAreaInfo(hInfoReferenceStr);
-            Console.WriteLine(" Area is " + areaInSqFt);
-            int zestimate = getZestimate(StrZillowInfo);
-            Console.WriteLine("ZESTIMATE: " + zestimate);
-            */
+            Console.WriteLine(Analytics.getAverageZestimate(houses));
             Console.Read();
         }
         static void printHouseInfo(House home)
