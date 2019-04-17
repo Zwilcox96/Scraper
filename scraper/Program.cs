@@ -27,10 +27,10 @@ namespace scraper
             //add houses to the houses
             //housesList.Add(new House(houseNumber, streetname, city, state, zip));
             housesList.Add(new House(438, "Greenbrier Ct", "Benicia", "ca", 94510));
-            //housesList.Add(new House(414, "12th Ave", "San Francisco", "ca", 94118));
-            //housesList.Add(new House(730, "Funston Ave", "San Francisco", "ca", 94118));
-            //housesList.Add(new House(233, "Del Loma Ct", "Fairfield", "ca", 94533));
-            //housesList.Add(new House(123, "Tustin Ct", "Benicia", "ca", 94510));
+            housesList.Add(new House(414, "12th Ave", "San Francisco", "ca", 94118));
+            housesList.Add(new House(730, "Funston Ave", "San Francisco", "ca", 94118));
+            housesList.Add(new House(233, "Del Loma Ct", "Fairfield", "ca", 94533));
+            housesList.Add(new House(123, "Tustin Ct", "Benicia", "ca", 94510));
 
             int numOfHouses = housesList.Count;
             Task[] GrabHouseInfo = new Task[numOfHouses];
@@ -50,11 +50,29 @@ namespace scraper
             TimeSpan ts = timer.Elapsed;
             Console.WriteLine("min: " + ts.Minutes + "sec: " + ts.Seconds);
 
+            List<House> priceFiltered = Analytics.filterHouses(housesList, 200000, 3000000, 0, int.MaxValue, 0, int.MaxValue, 0, int.MaxValue);
+            List<House> areaFiltered = Analytics.filterHouses(housesList, 0, int.MaxValue, 1000, 4000, 0, int.MaxValue, 0, int.MaxValue);
+            List<House> bedFiltered = Analytics.filterHouses(housesList, 0, int.MaxValue, 0, int.MaxValue, 3, 4, 0, int.MaxValue);
+            List<House> bathFiltered = Analytics.filterHouses(housesList, 0, int.MaxValue, 0, int.MaxValue, 0, int.MaxValue, 2, 3);
+            List<House> allFiltered = Analytics.filterHouses(housesList, 0, int.MaxValue, 0, int.MaxValue, 0, int.MaxValue, 0, int.MaxValue);
+
             //print all houses info
-            for (int i = 0; i < housesList.Count; i++)
-            {
-                housesList[i].printInfo();
-            }
+            Console.WriteLine("\n\nALL HOUSE INFO: ");
+            Console.WriteLine("=======================================================================");
+            printHouses(allFiltered);
+            Console.WriteLine("\n\nALL HOUSE INFO (Filtered by price): ");
+            Console.WriteLine("=======================================================================");
+            printHouses(priceFiltered);
+            Console.WriteLine("\n\nALL HOUSE INFO (Filtered by area): ");
+            Console.WriteLine("=======================================================================");
+            printHouses(areaFiltered);
+            Console.WriteLine("\n\nALL HOUSE INFO (Filtered by beds): ");
+            Console.WriteLine("=======================================================================");
+            printHouses(bedFiltered);
+            Console.WriteLine("\n\nALL HOUSE INFO (Filtered by bath): ");
+            Console.WriteLine("=======================================================================");
+            printHouses(bathFiltered);
+
 
 
             Console.WriteLine("\n\n\n\nAVG HOUSE INFO: ");
@@ -70,6 +88,14 @@ namespace scraper
             Console.WriteLine("Avg sqft: " + avgSqFT);
 
             Console.Read();
+        }
+
+        public static void printHouses(List<House> housesList)
+        {
+            for(int i = 0; i < housesList.Count; i++)
+            {
+                housesList[i].printInfo();
+            }
         }
     }
 }

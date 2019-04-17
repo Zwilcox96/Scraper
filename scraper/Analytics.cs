@@ -37,5 +37,15 @@ namespace scraper
             return houseBathrooms.DefaultIfEmpty(0).Average();
         }
 
+        public static List<House> filterHouses(List<House> houses, int minPrice, int maxPrice, int minArea, int maxArea, int minBedrooms, int maxBedrooms, int minBathrooms, int maxBathrooms)
+        {
+            var filteredHouses = from house in houses
+                                 where house.zestimate >= minPrice && house.zestimate <= maxPrice
+                                 && house.areaInSqFt >= minArea && house.areaInSqFt <= maxArea
+                                 && Convert.ToInt32(house.numberOfBeds) >= minBedrooms && Convert.ToInt32(house.numberOfBeds) <= maxBedrooms
+                                 && Convert.ToInt32(house.numberOfBaths) >= minBathrooms && Convert.ToInt32(house.numberOfBaths) <= maxBathrooms
+                                 select house;
+            return filteredHouses.ToList();
+        }
     }
 }
